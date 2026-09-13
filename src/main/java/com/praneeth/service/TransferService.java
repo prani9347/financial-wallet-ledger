@@ -9,7 +9,7 @@ import java.sql.ResultSet;
 
 public class TransferService {
 
-    public void transfer(long fromWalletId, long toWalletId, BigDecimal amount) {
+    public boolean transfer(long fromWalletId, long toWalletId, BigDecimal amount) {
 
         String selectWalletSql = """
                 SELECT balance
@@ -112,6 +112,7 @@ public class TransferService {
                 connection.commit();
 
                 System.out.println("Transfer successful.");
+                return true;
 
             } catch (Exception e) {
 
@@ -120,10 +121,12 @@ public class TransferService {
                 System.out.println("Transfer failed.");
                 System.out.println("ROLLBACK executed.");
                 System.out.println("Reason: " + e.getMessage());
+                return false;
             }
 
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 

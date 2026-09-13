@@ -65,6 +65,7 @@ Stores every credit and debit event — the audit trail.
 | created_at | TIMESTAMP |
 
 **Relationship:** One `wallet` → many `ledger_transaction` records.
+
 ```
 1. Start database transaction (autoCommit = false)
 2. Lock sender wallet   → SELECT ... FOR UPDATE
@@ -88,13 +89,21 @@ Reason: Insufficient balance.
 
 ## Concurrency Handling
 
-Two concurrent transfer requests hitting the same wallet are tested using **JUnit 5 multi-threading**. Row-level locking (`SELECT ... FOR UPDATE`) ensures one transaction fully completes (commit or rollback) before the next can read/modify the same wallet row — preventing double-spending or lost updates.
+The wallet's sender balance is protected against overdraft using **row-level locking** (`SELECT ... FOR UPDATE`), with wallets always locked in ascending ID order to prevent deadlocks between concurrent transfers.
+
+A JUnit test simulates 50 concurrent threads all attempting to transfer ₹100 from the same sender wallet (starting balance: ₹1000) to the same receiver wallet at the same time.
+
+**Actual test result:**
 
 ```
-Transfer successful.
-Transfer successful.
-Both concurrent transfers completed.
+TOTAL ATTEMPTS      = 50
+SUCCESS COUNT       = 10
+FAILED COUNT        = 40
+FINAL SENDER BAL    = 0.00
+FINAL RECEIVER BAL  = 1000.00
 ```
+
+Since the sender only has enough balance for 10 transfers of ₹100 (10 × 100 = 1000), exactly 10 threads succeeded and the remaining 40 correctly failed with "Insufficient balance." The final balances are mathematically exact — no overdraft occurred, no money was lost or duplicated, and the sum of both wallets after the test (0 + 1000 = 1000) matches the starting total exactly.
 
 ---
 
